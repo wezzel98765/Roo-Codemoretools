@@ -26,7 +26,7 @@ export async function getSkillsSection(
 	if (!skillsManager || !currentMode) return ""
 
 	// Get skills filtered by current mode (with override resolution)
-	const skills = skillsManager.getSkillsForMode(currentMode)
+	const skills = skillsManager.getSkillsForMode(currentMode).slice(0, 100)
 	if (skills.length === 0) return ""
 
 	const skillsXml = skills
@@ -40,7 +40,7 @@ export async function getSkillsSection(
 
 	return `====
 
-AVAILABLE SKILLS
+SAMPLE OF AVAILABLE SKILLS
 
 <available_skills>
 ${skillsXml}
