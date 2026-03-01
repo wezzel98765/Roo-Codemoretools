@@ -43,7 +43,6 @@ export async function getSkillsSection(
 SAMPLE OF AVAILABLE SKILLS
 
 <available_skills>
-${skillsXml}
 </available_skills>
 
 <mandatory_skill_check>
@@ -58,8 +57,6 @@ Step 1: Skill Evaluation
 Step 2: Branching Decision
 
 <if_skill_applies>
-- Select EXACTLY ONE skill.
-- Prefer the most specific skill when multiple skills match.
 - Use the skill tool to load the skill by name.
 - Load the skill's instructions fully into context BEFORE continuing.
 - Follow the skill instructions precisely.
