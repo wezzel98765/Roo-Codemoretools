@@ -22,7 +22,6 @@ import {
 	getModesSection,
 	addCustomInstructions,
 	markdownFormattingSection,
-	getSkillsSection,
 } from "./sections"
 
 // Helper function to get prompt component, filtering out empty objects
@@ -74,36 +73,42 @@ async function generatePrompt(
 	// Tool calling is native-only.
 	const effectiveProtocol = "native"
 
-	const [modesSection, skillsSection] = await Promise.all([
-		getModesSection(context),
-		getSkillsSection(skillsManager, mode as string),
-	])
+const modesSection = await getModesSection(context)
+
 
 	// Tools catalog is not included in the system prompt.
 	const toolsCatalog = ""
 
-	const basePrompt = `${roleDefinition}
+	const basePrompt = `${markdownFormattingSection()}
 
-${markdownFormattingSection()}
+${getSharedToolUseSection()}
 
-${getSharedToolUseSection()}${toolsCatalog}
+${getToolUseGuidelinesSection()}
 
-	${getToolUseGuidelinesSection()}
+${modesSection}
+
+${getObjectiveSection()}
+
+====
+
+SKILLS: The skills catalog is at ~/.roo/skills/catalog.md — use read_file or list_files to discover and load skills as needed. Do not wait for skills to be injected.
+
+====
 
 ${getCapabilitiesSection(cwd, shouldIncludeMcp ? mcpHub : undefined)}
 
-${modesSection}
-${skillsSection ? `\n${skillsSection}` : ""}
 ${getRulesSection(cwd, settings)}
 
 ${getSystemInfoSection(cwd)}
 
-${getObjectiveSection()}
+====
+
+${roleDefinition}
 
 ${await addCustomInstructions(baseInstructions, globalCustomInstructions || "", cwd, mode, {
-	language: language ?? formatLanguage(vscode.env.language),
-	rooIgnoreInstructions,
-	settings,
+  language: language ?? formatLanguage(vscode.env.language),
+  rooIgnoreInstructions,
+  settings,
 })}`
 
 	return basePrompt
