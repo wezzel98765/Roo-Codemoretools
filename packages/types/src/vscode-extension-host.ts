@@ -103,7 +103,10 @@ export interface ExtensionMessage {
 		| "branchWorktreeIncludeResult"
 		| "folderSelected"
 		| "skills"
+		| "fileContent"
 	text?: string
+	/** For fileContent: { path, content, error? } */
+	fileContent?: { path: string; content: string | null; error?: string }
 	payload?: any // eslint-disable-line @typescript-eslint/no-explicit-any
 	checkpointWarning?: {
 		type: "WAIT_TIMEOUT" | "INIT_TIMEOUT"
@@ -306,6 +309,7 @@ export type ExtensionState = Pick<
 	lockApiConfigAcrossModes?: boolean
 	version: string
 	clineMessages: ClineMessage[]
+	currentTaskId?: string
 	currentTaskItem?: HistoryItem
 	currentTaskTodos?: TodoItem[] // Initial todos for the current task
 	apiConfiguration: ProviderSettings
@@ -366,9 +370,7 @@ export type ExtensionState = Pick<
 	apiModelId?: string
 	mcpServers?: McpServer[]
 	mdmCompliant?: boolean
-	remoteControlEnabled: boolean
 	taskSyncEnabled: boolean
-	featureRoomoteControlEnabled: boolean
 	openAiCodexIsAuthenticated?: boolean
 	debug?: boolean
 
@@ -444,6 +446,7 @@ export interface WebviewMessage {
 		| "openImage"
 		| "saveImage"
 		| "openFile"
+		| "readFileContent"
 		| "openMention"
 		| "cancelTask"
 		| "cancelAutoApproval"
@@ -472,7 +475,6 @@ export interface WebviewMessage {
 		| "deleteMessageConfirm"
 		| "submitEditedMessage"
 		| "editMessageConfirm"
-		| "remoteControlEnabled"
 		| "taskSyncEnabled"
 		| "searchCommits"
 		| "setApiConfigPassword"
@@ -508,9 +510,12 @@ export interface WebviewMessage {
 		| "condenseTaskContextRequest"
 		| "requestIndexingStatus"
 		| "startIndexing"
+		| "stopIndexing"
 		| "clearIndexData"
 		| "indexingStatusUpdate"
 		| "indexCleared"
+		| "toggleWorkspaceIndexing"
+		| "setAutoEnableDefault"
 		| "focusPanelRequest"
 		| "openExternal"
 		| "filterMarketplaceItems"
@@ -576,6 +581,7 @@ export interface WebviewMessage {
 		| "updateSkillModes"
 		| "openSkillFile"
 	text?: string
+	taskId?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
 	disabled?: boolean
@@ -673,6 +679,8 @@ export interface WebviewMessage {
 		codebaseIndexOpenRouterApiKey?: string
 	}
 	updatedSettings?: RooCodeSettings
+	/** Task configuration applied via `createTask()` when starting a cloud task. */
+	taskConfiguration?: RooCodeSettings
 	// Worktree properties
 	worktreePath?: string
 	worktreeBranch?: string
@@ -705,7 +713,7 @@ export const checkoutRestorePayloadSchema = z.object({
 export type CheckpointRestorePayload = z.infer<typeof checkoutRestorePayloadSchema>
 
 export interface IndexingStatusPayload {
-	state: "Standby" | "Indexing" | "Indexed" | "Error"
+	state: "Standby" | "Indexing" | "Indexed" | "Error" | "Stopping"
 	message: string
 }
 
@@ -739,6 +747,8 @@ export interface IndexingStatus {
 	totalItems: number
 	currentItemUnit?: string
 	workspacePath?: string
+	workspaceEnabled?: boolean
+	autoEnableDefault?: boolean
 }
 
 export interface IndexingStatusUpdateMessage {
@@ -781,6 +791,8 @@ export interface ClineSayTool {
 	matchCount?: number
 	diff?: string
 	content?: string
+	// Original file content before first edit (for merged diff display in FileChangesPanel)
+	originalContent?: string
 	// Unified diff statistics computed by the extension
 	diffStats?: { added: number; removed: number }
 	regex?: string
