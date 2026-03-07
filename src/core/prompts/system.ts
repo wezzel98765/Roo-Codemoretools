@@ -59,27 +59,27 @@ async function generatePrompt(
 		throw new Error("Extension context is required for generating system prompt")
 	}
 
-	// Get the full mode config to ensure we have the role definition (used for groups, etc.)
 	const modeConfig = getModeBySlug(mode, customModeConfigs) || modes.find((m) => m.slug === mode) || modes[0]
 	const { roleDefinition, baseInstructions } = getModeSelection(mode, promptComponent, customModeConfigs)
 
-	// Check if MCP functionality should be included
 	const hasMcpGroup = modeConfig.groups.some((groupEntry) => getGroupName(groupEntry) === "mcp")
 	const hasMcpServers = mcpHub && mcpHub.getServers().length > 0
 	const shouldIncludeMcp = hasMcpGroup && hasMcpServers
 
-	const codeIndexManager = CodeIndexManager.getInstance(context, cwd)
+	CodeIndexManager.getInstance(context, cwd)
 
-	// Tool calling is native-only.
-	const effectiveProtocol = "native"
+	const modesSection = await getModesSection(context)
 
-const modesSection = await getModesSection(context)
+	const customInstructions = await addCustomInstructions(baseInstructions, globalCustomInstructions || "", cwd, mode, {
+		language: language ?? formatLanguage(vscode.env.language),
+		rooIgnoreInstructions,
+		settings,
+	})
 
+	const staticCoreSection = `====
+SYSTEM CORE
 
-	// Tools catalog is not included in the system prompt.
-	const toolsCatalog = ""
-
-	const basePrompt = `${markdownFormattingSection()}
+${markdownFormattingSection()}
 
 ${getSharedToolUseSection()}
 
@@ -91,27 +91,31 @@ ${getObjectiveSection()}
 
 ====
 
-SKILLS: The skills catalog is at ~/.roo/skills/catalog.md — use read_file or list_files to discover and load skills as needed. Do not wait for skills to be injected.
+SKILLS
+
+The skills catalog is at ~/.roo/skills/catalog.md — use read_file or list_files to discover and load skills as needed. Do not wait for skills to be injected.
 
 ====
+
+ROLE DEFINITION
+
+${roleDefinition}
+
+${customInstructions}`
+
+	const sessionContextSection = `====
+
+SESSION CONTEXT
 
 ${getCapabilitiesSection(cwd, shouldIncludeMcp ? mcpHub : undefined)}
 
 ${getRulesSection(cwd, settings)}
 
-${getSystemInfoSection(cwd)}
+${getSystemInfoSection(cwd)}`
 
-====
+	return `${staticCoreSection}
 
-${roleDefinition}
-
-${await addCustomInstructions(baseInstructions, globalCustomInstructions || "", cwd, mode, {
-  language: language ?? formatLanguage(vscode.env.language),
-  rooIgnoreInstructions,
-  settings,
-})}`
-
-	return basePrompt
+${sessionContextSection}`
 }
 
 export const SYSTEM_PROMPT = async (
