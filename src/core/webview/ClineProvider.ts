@@ -169,7 +169,7 @@ export class ClineProvider
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "feb-2026-v3.50.0-gemini-31-pro-cli-ndjson-cli-v010" // v3.50.0 Gemini 3.1 Pro Support, CLI NDJSON Protocol, CLI v0.1.0
+	public readonly latestAnnouncementId = "mar-2026-v3.51.0-gpt-54-slash-skills" // v3.51.0 OpenAI GPT-5.4 support and slash command skills
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
 
@@ -2989,7 +2989,20 @@ export class ClineProvider
 
 		console.log(`[cancelTask] cancelling task ${task.taskId}.${task.instanceId}`)
 
-		const { historyItem, uiMessagesFilePath } = await this.getTaskWithId(task.taskId)
+		let historyItem: HistoryItem | undefined
+		try {
+			const history = await this.getTaskWithId(task.taskId)
+			historyItem = history.historyItem
+		} catch (error) {
+			// During task startup there is a short window where currentTask exists
+			// but task history has not been persisted yet. Cancelling should still
+			// abort safely; we just skip post-cancel rehydration in that case.
+			if (error instanceof Error && error.message === "Task not found") {
+				this.log(`[cancelTask] task history missing for ${task.taskId}; skipping rehydrate`)
+			} else {
+				throw error
+			}
+		}
 
 		// Preserve parent and root task information for history item.
 		const rootTask = task.rootTask
@@ -3045,6 +3058,10 @@ export class ClineProvider
 				)
 				return
 			}
+		}
+
+		if (!historyItem) {
+			return
 		}
 
 		// Clears task again, so we need to abortTask manually above.
