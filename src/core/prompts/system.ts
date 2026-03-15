@@ -81,7 +81,7 @@ async function generatePrompt(
 	// Ensure code index manager is initialized for the workspace.
 	CodeIndexManager.getInstance(context, cwd)
 
-	// Static across the workflow unless mode configuration changes globally.
+	// Static or session-stable content should be loaded before mode-specific content.
 	const modesSection = await getModesSection(context)
 
 	// Keep the most dynamic/user-specific content as late as possible for KV cache reuse.
@@ -108,9 +108,9 @@ ${getObjectiveSection()}
 
 SKILLS
 
-The skills catalog is at ~/.roo/skills/catalog.md — use read_file or list_files to discover and load skills as needed. Do not wait for skills to be injected.`
+The skills catalog is located at /.roo/skills/catalog.md in the current workspace. Discover and load skills from there as needed rather than relying on injected skill content.`
 
-	const sessionContextSection = `====
+const sessionContextSection = `====
 SESSION CONTEXT
 
 ${getCapabilitiesSection(cwd, shouldIncludeMcp ? mcpHub : undefined)}
